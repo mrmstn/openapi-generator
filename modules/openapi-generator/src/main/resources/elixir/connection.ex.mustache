@@ -8,8 +8,8 @@ defmodule {{moduleName}}.Connection do
 
   # Add any middleware here (authentication)
   plug Tesla.Middleware.BaseUrl, "{{{basePath}}}"
-  plug Tesla.Middleware.Headers, %{"User-Agent" => "Elixir"}
-  plug Tesla.Middleware.EncodeJson
+  plug Tesla.Middleware.Headers, [{"User-Agent", "Elixir"}]
+  plug Tesla.Middleware.EncodeJson, [engine: Poison]
 
   {{#hasAuthMethods}}
   {{#authMethods}}
@@ -33,9 +33,11 @@ defmodule {{moduleName}}.Connection do
   """
   @spec new(String.t) :: Tesla.Env.client
   def new(token) when is_binary(token) do
-    Tesla.build_client([
-      {Tesla.Middleware.Headers,  %{"Authorization" => "Bearer #{token}"}}
-    ])
+    Tesla.build_client(
+      [
+        {Tesla.Middleware.Headers, [{"Authorization", "Bearer #{token}"}]}
+      ]
+    )
   end
 
   @doc """
@@ -71,9 +73,11 @@ defmodule {{moduleName}}.Connection do
   """
   @spec new(String.t, String.t) :: Tesla.Env.client
   def new(username, password) do
-    Tesla.build_client([
-      {Tesla.Middleware.BasicAuth, %{username: username, password: password}}
-    ])
+    Tesla.build_client(
+      [
+        {Tesla.Middleware.BasicAuth, [username: username, password: password]}
+      ]
+    )
   end
   {{/isBasic}}
   {{/authMethods}}

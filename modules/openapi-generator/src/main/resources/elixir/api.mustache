@@ -58,7 +58,7 @@ defmodule {{moduleName}}.Api.{{classname}} do
 {{/-first}}
 {{/optionalParams}}
     |> Enum.into([])
-    |> (&Connection.request(connection, &1)).()
+    |> (&Connection.request!(connection, &1)).()
     |> decode({{decodedStruct}})
   end
   {{/operation}}
