@@ -87,7 +87,7 @@ defmodule {{moduleName}}.RequestBuilder do
   end
   def add_param(request, :headers, key, value) do
     request
-    |> Map.update(:headers, %{key => value}, &(Map.put(&1, key, value)))
+    |> Map.update(:headers, [{key, value}], &([{key, value}, &1]))
   end
   def add_param(request, :file, name, path) do
     request
