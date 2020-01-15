@@ -4,32 +4,61 @@ defmodule {{moduleName}}.Deserializer do
   Helper functions for deserializing responses into models
   """
 
-  @doc """
-  Update the provided model with a deserialization of a nested value
-  """
-  @spec deserialize(struct(), :atom, :atom, struct(), keyword()) :: struct()
-  def deserialize(model, field, :list, mod, options) do
-    model
-    |> Map.update!(field, &(Poison.Decode.decode(&1, Keyword.merge(options, [as: [struct(mod)]]))))
+  defprotocol Decoder do
+    @fallback_to_any true
+    def decode(object, values)
   end
-  def deserialize(model, field, :struct, mod, options) do
-    model
-    |> Map.update!(field, &(Poison.Decode.decode(&1, Keyword.merge(options, [as: struct(mod)]))))
+
+  defimpl Decoder, for: Any do
+    def decode(object, values), do: values
   end
-  def deserialize(model, field, :map, mod, options) do
-    model
-    |> Map.update!(field, &(Map.new(&1, fn {key, val} -> {key, Poison.Decode.decode(val, Keyword.merge(options, [as: struct(mod)]))} end)))
-  end
-  def deserialize(model, field, :date, _, _options) do
-    value = Map.get(model, field)
-    case is_binary(value) do
-      true -> case DateTime.from_iso8601(value) do
-                {:ok, datetime, _offset} ->
-                  Map.put(model, field, datetime)
-                _ ->
-                  model
-              end
-      false -> model
+
+  def decode(values, %_{} = struct) do
+    map_struct = Map.from_struct(struct)
+
+    with :ok <- check_unrecognized_properties(values, map_struct),
+         values = cast_atom_keys(values, map_struct),
+         values <- cast_properties(values, struct) do
+      struct(struct, values)
     end
   end
+
+  def decode(values, %{}), do: values
+
+  def decode(value, :date) do
+    case DateTime.from_iso8601(value) do
+      {:ok, datetime, _offset} -> datetime
+      _ -> nil
+    end
+  end
+
+  def decode(values, [type]) when is_list(values) do
+    Enum.map(values, &decode(&1, type))
+  end
+
+  defp check_unrecognized_properties(values, struct) do
+    input_keys = values |> Map.keys() |> Enum.map(&to_string/1)
+    schema_keys = struct |> Map.keys() |> Enum.map(&to_string/1)
+    extra_keys = input_keys -- schema_keys
+
+    # if extra_keys == [] do
+    :ok
+    # else
+    #   {:error, {:unexpected_fields, extra_keys}}
+    # end
+  end
+
+  defp cast_atom_keys(input_map, properties) do
+    Enum.reduce(properties, %{}, fn {key, _}, output ->
+      string_key = to_string(key)
+
+      case input_map do
+        %{^key => value} -> Map.put(output, key, value)
+        %{^string_key => value} -> Map.put(output, key, value)
+        _ -> output
+      end
+    end)
+  end
+
+  defp cast_properties(values, struct), do: __MODULE__.Decoder.decode(struct, values)
 end

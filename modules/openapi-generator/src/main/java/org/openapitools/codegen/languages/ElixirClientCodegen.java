@@ -55,7 +55,7 @@ public class ElixirClientCodegen extends DefaultCodegen implements CodegenConfig
     List<String> extraApplications = Arrays.asList(":logger");
     List<String> deps = Arrays.asList(
             "{:tesla, \"~> 1.2\"}",
-            "{:poison, \"~> 3.0\"}"
+            "{:jason, \"~> 1.0\"}"
     );
 
     public ElixirClientCodegen() {
@@ -158,6 +158,10 @@ public class ElixirClientCodegen extends DefaultCodegen implements CodegenConfig
         supportingFiles.add(new SupportingFile("gitignore.mustache",
                 "",
                 ".gitignore")
+        );
+        supportingFiles.add(new SupportingFile(".formatter.exs.mustache",
+                "",
+                ".formatter.exs")
         );
 
         /**
@@ -608,7 +612,7 @@ public class ElixirClientCodegen extends DefaultCodegen implements CodegenConfig
         }
 
         public String decodedStruct() {
-            // Let Poison decode the entire response into a generic blob
+            // Let Jason decode the entire response into a generic blob
             if (isMapContainer) {
                 return "%{}";
             }

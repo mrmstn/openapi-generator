@@ -61,7 +61,7 @@ defmodule {{moduleName}}.Api.{{classname}} do
     |> (&Connection.request(connection, &1)).()
     |> evaluate_response({{#responses}}{{#-first}}[
 {{/-first}}
-      { {{& codeMappingKey}}, {{decodedStruct}}}{{#hasMore}},{{/hasMore}}
+      { {{& codeMappingKey}}, {{decodedStruct}} }{{#hasMore}},{{/hasMore}}
 {{#-last}}    ]{{/-last}}{{/responses}})
   end
   {{/operation}}
