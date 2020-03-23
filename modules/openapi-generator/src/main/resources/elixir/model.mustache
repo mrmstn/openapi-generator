@@ -21,13 +21,15 @@ defimpl {{moduleName}}.Deserializer.Decoder, for: {{moduleName}}.Model.{{classna
   alias {{moduleName}}.Deserializer
 
   def decode(object, values) do
-    values
+    %{
     {{#vars}}
     {{^isPrimitiveType}}
-    {{#datatype}}|> Map.update(:{{baseName}}, nil, &Deserializer.decode(&1, {{#isListContainer}}[%{{moduleName}}.Model.{{items.datatype}}{}]{{/isListContainer}}{{#isMapContainer}}%{}{{/isMapContainer}}{{#isDate}}:date{{/isDate}}{{#isDateTime}}:date{{/isDateTime}}{{^isDate}}{{^isDateTime}}{{^isMapContainer}}{{^isListContainer}}%{{moduleName}}.Model.{{dataType}}{}{{/isListContainer}}{{/isMapContainer}}{{/isDateTime}}{{/isDate}}))
+      {{#datatype}}{{baseName}}: &Deserializer.decode(&1, {{#isListContainer}}[%{{moduleName}}.Model.{{items.datatype}}{}]{{/isListContainer}}{{#isMapContainer}}%{}{{/isMapContainer}}{{#isDate}}:date{{/isDate}}{{#isDateTime}}:date{{/isDateTime}}{{^isDate}}{{^isDateTime}}{{^isMapContainer}}{{^isListContainer}}%{{moduleName}}.Model.{{dataType}}{}{{/isListContainer}}{{/isMapContainer}}{{/isDateTime}}{{/isDate}}){{#hasMore}},{{/hasMore}}
     {{/datatype}}
     {{/isPrimitiveType}}
     {{/vars}}
+    }
+    |> {{moduleName}}.Deserializer.map_by_mapping(values, object)
   end
 end
 {{/hasComplexVars}}

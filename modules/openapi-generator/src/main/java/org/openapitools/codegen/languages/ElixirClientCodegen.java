@@ -22,6 +22,7 @@ import com.samskivert.mustache.Template;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.media.ArraySchema;
+import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import org.apache.commons.lang3.StringUtils;
@@ -339,8 +340,20 @@ public class ElixirClientCodegen extends DefaultCodegen implements CodegenConfig
 
     @Override
     public CodegenModel fromModel(String name, Schema model) {
+        if (model instanceof ObjectSchema && (model.getProperties() == null || model.getProperties().size() <= 0)) {
+            System.out.println("!!!!!!!!!!!!!!!!!");
+        }
         CodegenModel cm = super.fromModel(name, model);
         return new ExtendedCodegenModel(cm);
+    }
+
+    @Override
+    public CodegenProperty fromProperty(String name, Schema p) {
+        if (p instanceof ObjectSchema && (p.getProperties() == null || p.getProperties().size() <= 0)) {
+            LOGGER.warn("Complex Schema with no properties defined, setting additionalProperties to true");
+            p.setAdditionalProperties(Boolean.TRUE);
+        }
+        return super.fromProperty(name, p);
     }
 
     @Override
@@ -598,12 +611,12 @@ public class ElixirClientCodegen extends DefaultCodegen implements CodegenConfig
             this.isDefinedDefault = (this.code.equals("0") || this.code.equals("default"));
         }
 
-        public String codeMappingKey(){
-            if(this.isDefinedDefault) {
+        public String codeMappingKey() {
+            if (this.isDefinedDefault) {
                 return ":default";
             }
 
-            if(code.matches("^\\d{3}$")){
+            if (code.matches("^\\d{3}$")) {
                 return code;
             }
 

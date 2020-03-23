@@ -95,8 +95,12 @@ defmodule {{moduleName}}.RequestBuilder do
   end
 
   def add_param(request, :headers, key, value) do
-    request
-    |> Tesla.put_header(key, value)
+    headers =
+      request
+      |> Map.get(:headers, [])
+      |> List.keystore(key, 0, {key, value})
+
+    Map.put(request, :headers, headers)
   end
 
   def add_param(request, :file, name, path) do
@@ -131,10 +135,11 @@ defmodule {{moduleName}}.RequestBuilder do
           {:ok, struct()} | {:ok, Tesla.Env.t()} | {:error, any}
   def decode(%Tesla.Env{} = env, false), do: {:ok, env}
 
-  def decode(%Tesla.Env{body: body}, type) do
-    body
-    |> Jason.decode!()
-    |> {{moduleName}}.Deserializer.decode(type)
+  def decode(%Tesla.Env{body: body} = env, type) do
+    case Jason.decode(body) do
+      {:ok, map} -> {{moduleName}}.Deserializer.decode(map, type)
+      {:error, _} -> {:error, env}
+    end
   end
 
   def evaluate_response({:ok, %Tesla.Env{} = env}, mapping) do

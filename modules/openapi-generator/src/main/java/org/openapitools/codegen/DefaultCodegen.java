@@ -2466,7 +2466,7 @@ public class DefaultCodegen implements CodegenConfig {
 
             // handle inner property
             Schema innerSchema = ModelUtils.unaliasSchema(this.openAPI, ModelUtils.getAdditionalProperties(p));
-            if (innerSchema == null) {
+            if (innerSchema == null || p.getAdditionalProperties().equals(Boolean.TRUE)) {
                 LOGGER.error("Undefined map inner type for `{}`. Default to String.", p.getName());
                 innerSchema = new StringSchema().description("//TODO automatically added by openapi-generator due to undefined type");
                 p.setAdditionalProperties(innerSchema);

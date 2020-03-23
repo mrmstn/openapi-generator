@@ -10,7 +10,25 @@ defmodule {{moduleName}}.Deserializer do
   end
 
   defimpl Decoder, for: Any do
-    def decode(object, values), do: values
+    def decode(object, values), do: {:ok, struct(object, values)}
+  end
+
+  def map_by_mapping(mappings, values, %_{} = target) when is_map(mappings) and is_map(values) do
+    mappings
+    |> Enum.reduce_while(values, fn {key, fun}, acc ->
+      case fun.(acc[key]) do
+        {:ok, val} -> {:cont, Map.put(acc, key, val)}
+        {:error, error} -> {:halt, {:error, {key, error}}}
+      end
+    end)
+    |> case do
+      {:error, error} ->
+        {:error, error}
+
+      %{} = map ->
+        struct = struct(target, map)
+        {:ok, struct}
+    end
   end
 
   def decode(values, %_{} = struct) do
@@ -18,35 +36,47 @@ defmodule {{moduleName}}.Deserializer do
 
     with :ok <- check_unrecognized_properties(values, map_struct),
          values = cast_atom_keys(values, map_struct),
-         values <- cast_properties(values, struct) do
-      struct(struct, values)
+         {:ok, values} <- cast_properties(values, struct) do
+      {:ok, values}
     end
   end
 
-  def decode(values, %{}), do: values
+  def decode(values, %{}), do: {:ok, values}
 
   def decode(value, :date) do
     case DateTime.from_iso8601(value) do
-      {:ok, datetime, _offset} -> datetime
+      {:ok, datetime, _offset} -> {:ok, datetime}
       _ -> nil
     end
   end
 
   def decode(values, [type]) when is_list(values) do
-    Enum.map(values, &decode(&1, type))
+    values
+    |> Enum.reduce_while([], fn value, acc ->
+      case decode(value, type) do
+        {:ok, entry} -> {:cond, [entry | acc]}
+        {:error, error} -> {:halt, {:error, error}}
+      end
+    end)
+    |> case do
+      {:error, error} -> {:error, error}
+      list when is_list(list) -> {:ok, list}
+    end
   end
 
-  defp check_unrecognized_properties(values, struct) do
-    input_keys = values |> Map.keys() |> Enum.map(&to_string/1)
-    schema_keys = struct |> Map.keys() |> Enum.map(&to_string/1)
-    extra_keys = input_keys -- schema_keys
+  defp check_unrecognized_properties(_values, _struct), do: :ok
 
-    # if extra_keys == [] do
-    :ok
-    # else
-    #   {:error, {:unexpected_fields, extra_keys}}
-    # end
-  end
+  #  defp check_unrecognized_properties(values, struct) do
+  #    input_keys = values |> Map.keys() |> Enum.map(&to_string/1)
+  #    schema_keys = struct |> Map.keys() |> Enum.map(&to_string/1)
+  #    extra_keys = input_keys -- schema_keys
+  #
+  #    if extra_keys == [] do
+  #      :ok
+  #    else
+  #      {:error, {:unexpected_fields, extra_keys}}
+  #    end
+  #  end
 
   defp cast_atom_keys(input_map, properties) do
     Enum.reduce(properties, %{}, fn {key, _}, output ->
